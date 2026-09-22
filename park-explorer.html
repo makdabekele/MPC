@@ -1,0 +1,591 @@
+<title>Park Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Work+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #E4E7D9;
+    --surface: #F6F7EF;
+    --surface-2: #FFFFFF;
+    --ink: #1C2419;
+    --ink-soft: #576050;
+    --accent: #2E5D46;
+    --accent-ink: #F3F4E9;
+    --accent-2: #C4872E;
+    --line: #C3C9B0;
+    --danger: #A5432C;
+    --shadow: 0 1px 2px rgba(28,36,25,0.06), 0 8px 24px rgba(28,36,25,0.08);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg: #12160F;
+      --surface: #1A2116;
+      --surface-2: #212A1C;
+      --ink: #E9ECDD;
+      --ink-soft: #9FAB92;
+      --accent: #7FC29B;
+      --accent-ink: #101410;
+      --accent-2: #E3AE5C;
+      --line: #303B29;
+      --danger: #E08669;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg: #12160F;
+    --surface: #1A2116;
+    --surface-2: #212A1C;
+    --ink: #E9ECDD;
+    --ink-soft: #9FAB92;
+    --accent: #7FC29B;
+    --accent-ink: #101410;
+    --accent-2: #E3AE5C;
+    --line: #303B29;
+    --danger: #E08669;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Work Sans", system-ui, sans-serif;
+    padding-inline: 20px;
+    padding-block: 28px;
+    line-height: 1.5;
+  }
+  a{ color: var(--accent); }
+  h1,h2,h3{ font-family:"Fraunces", Georgia, serif; text-wrap: balance; margin: 0; }
+  .mono{ font-family:"IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+  .wrap{ max-width: 1040px; margin-inline:auto; }
+
+  /* ---------- header ---------- */
+  header.top{
+    position: relative;
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-radius: 18px;
+    padding: 32px 28px;
+    overflow: hidden;
+    margin-bottom: 22px;
+  }
+  header.top svg.contours{ position:absolute; inset:0; width:100%; height:100%; opacity:.18; }
+  header.top .content{ position:relative; }
+  .eyebrow{
+    font-family:"IBM Plex Mono", monospace;
+    font-size: 12px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    opacity: .85;
+    margin-bottom: 10px;
+  }
+  header.top h1{ font-size: clamp(30px, 5vw, 44px); font-weight: 600; }
+  header.top p.sub{ margin-top:8px; max-width: 58ch; opacity: .92; font-size: 15px; }
+
+  .controls{
+    margin-top: 22px;
+    display:flex; flex-direction:column; gap:12px;
+  }
+  .field-row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  input#q{
+    font: inherit;
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: rgba(255,255,255,0.92);
+    color: #1C2419;
+    min-width: 220px;
+    flex: 1 1 220px;
+  }
+  input#q:focus{ outline: 2px solid var(--accent-2); outline-offset:1px; }
+  .state-chips{ display:flex; flex-wrap:wrap; gap:7px; }
+  .state-chip{
+    font-family:"IBM Plex Mono",monospace;
+    font-size: 12px; letter-spacing:.04em;
+    padding: 6px 11px; border-radius:100px; cursor:pointer;
+    background: rgba(255,255,255,0.14); color: var(--accent-ink);
+    border: 1px solid rgba(255,255,255,0.35);
+  }
+  .state-chip.active{ background: var(--accent-2); color:#241705; border-color: transparent; font-weight:600; }
+  .state-chip:focus-visible{ outline: 2px solid var(--accent-ink); outline-offset:2px; }
+
+  /* ---------- results ---------- */
+  section.results{ margin-top: 6px; }
+  .results-head{
+    display:flex; align-items:baseline; justify-content:space-between; gap:12px;
+    margin: 6px 2px 14px;
+    flex-wrap: wrap;
+  }
+  .results-head h2{ font-size: 20px; font-weight:600; }
+  .results-head .count{ color: var(--ink-soft); font-size: 13px; font-family:"IBM Plex Mono",monospace; }
+
+  .grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 14px;
+  }
+  .card{
+    text-align:left; cursor:pointer;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: hidden;
+    display:flex; flex-direction:column;
+    box-shadow: var(--shadow);
+    transition: transform .12s ease, border-color .12s ease;
+    color: inherit; font: inherit; padding:0;
+  }
+  .card:hover{ transform: translateY(-2px); border-color: var(--accent); }
+  .card img{ width:100%; aspect-ratio: 16/10; object-fit:cover; display:block; background:var(--surface-2); }
+  .card .inner{ padding: 14px 16px 16px; display:flex; flex-direction:column; gap:8px; flex:1; }
+  .card .code{ font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.08em; color: var(--accent); text-transform:uppercase; }
+  .card h3{ font-size: 18px; line-height:1.25; }
+  .card p{ margin:0; font-size:13.5px; color: var(--ink-soft); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .card .view{ margin-top:auto; font-size:13px; font-weight:600; color: var(--accent); }
+
+  .empty{
+    border: 1px dashed var(--line); border-radius: 14px; padding: 28px; text-align:center; color: var(--ink-soft);
+  }
+
+  /* ---------- detail overlay ---------- */
+  .overlay{
+    position: fixed; inset:0; background: rgba(10,12,8,.5);
+    display:flex; align-items:flex-start; justify-content:center;
+    padding: 24px 16px; overflow-y:auto; z-index: 20;
+  }
+  .overlay[hidden]{ display:none; }
+  .detail{
+    background: var(--surface); color: var(--ink);
+    border-radius: 18px; max-width: 760px; width:100%;
+    box-shadow: var(--shadow);
+    margin-bottom: 40px;
+  }
+  .detail-head{ position:relative; }
+  .detail-head img{ width:100%; aspect-ratio: 16/9; object-fit:cover; border-radius:18px 18px 0 0; display:block; background:var(--surface-2); }
+  .close-btn{
+    position:absolute; top:12px; right:12px;
+    width:34px; height:34px; border-radius:50%;
+    background: rgba(20,24,16,.65); color:#fff; border:none; cursor:pointer;
+    font-size:18px; line-height:1;
+  }
+  .detail-body{ padding: 22px 24px 26px; display:flex; flex-direction:column; gap:20px; }
+  .detail-body .code{ font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.08em; color: var(--accent); text-transform:uppercase; }
+  .detail-body h2{ font-size: 26px; margin-top:4px; }
+  .detail-body .desc{ font-size:15px; }
+  .detail-body .credit{ font-size:11px; color:var(--ink-soft); margin-top:6px; }
+
+  .thumbs{ display:flex; gap:8px; overflow-x:auto; padding-bottom:2px; }
+  .thumbs img{ width:96px; height:66px; object-fit:cover; border-radius:8px; flex:none; cursor:pointer; border:1px solid var(--line); }
+  .thumbs img.active{ outline: 2px solid var(--accent); }
+
+  .chips{ display:flex; flex-wrap:wrap; gap:7px; }
+  .chip{
+    font-size:12.5px; padding:5px 10px; border-radius:100px;
+    background: var(--surface-2); border:1px solid var(--line); color: var(--ink-soft);
+  }
+
+  .stat-row{ display:grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap:12px; }
+  .stat{ background: var(--surface-2); border:1px solid var(--line); border-radius:12px; padding:12px 14px; }
+  .stat .label{ font-family:"IBM Plex Mono",monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-soft); }
+  .stat .value{ font-family:"IBM Plex Mono",monospace; font-size:16px; margin-top:4px; }
+
+  table.fees{ width:100%; border-collapse:collapse; font-size:13.5px; }
+  table.fees th{ text-align:left; font-family:"IBM Plex Mono",monospace; font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft); padding:6px 8px; border-bottom:1px solid var(--line); }
+  table.fees td{ padding:8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  table.fees td.cost{ font-family:"IBM Plex Mono",monospace; white-space:nowrap; }
+  .fees-wrap{ overflow-x:auto; }
+
+  h4.section-label{ font-family:"IBM Plex Mono",monospace; font-size:11.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--accent); margin:0 0 8px; }
+
+  footer.note{
+    margin-top: 30px; padding: 14px 4px 4px; border-top:1px solid var(--line);
+    color: var(--ink-soft); font-size:12.5px;
+  }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <svg class="contours" viewBox="0 0 400 200" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M-10 170 Q60 140 120 165 T260 150 T420 175" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M-10 190 Q70 155 130 185 T270 170 T420 195" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M-10 60 Q80 20 150 55 T300 35 T420 65" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M-10 40 Q90 5 160 35 T310 15 T420 45" fill="none" stroke="currentColor" stroke-width="1.5"/>
+      <path d="M-10 210 Q60 190 130 208 T280 200 T420 215" fill="none" stroke="currentColor" stroke-width="1.5"/>
+    </svg>
+    <div class="content">
+      <div class="eyebrow">National Park Service data · gathered via a local MCP server</div>
+      <h1>Park Explorer</h1>
+      <p class="sub">Twelve national parks, browsable by state or keyword. Every fact here — fees, hours, activities, photos — was pulled straight from the National Park Service through the <code>nps</code> MCP server and built into this page.</p>
+
+      <div class="controls">
+        <div class="field-row">
+          <input id="q" type="search" placeholder="Search by name, state, or activity…" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="state-chips" id="stateChips"></div>
+      </div>
+    </div>
+  </header>
+
+  <section class="results">
+    <div class="results-head">
+      <h2>Parks</h2>
+      <span class="count mono" id="resultsCount"></span>
+    </div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <footer class="note">
+    Built for a National Parks Explorer project: this page's data was gathered through a local MCP server (<code>nps</code>) paired with a companion "national-park-guide" skill, then baked into the page as a static site. Source: nps.gov. Not an official NPS product.
+  </footer>
+</div>
+
+<div class="overlay" id="overlay" hidden>
+  <div class="detail" id="detailPanel" role="dialog" aria-modal="true" aria-labelledby="detailName"></div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var PARKS = [
+    {
+      code:"yell", name:"Yellowstone National Park", designation:"National Park", states:"WY,MT,ID",
+      url:"https://www.nps.gov/yell/index.htm",
+      description:"America's first national park, spanning Wyoming, Montana, and Idaho — home to Old Faithful, the Grand Prismatic Spring, and one of the most intact temperate ecosystems on Earth.",
+      phone:"307-344-7381", email:"YELL_Information@nps.gov",
+      weather:"Yellowstone's weather can vary quite a bit, even in a single day. In the summer, daytime highs can exceed 70°F (21°C), only to drop 20 or more degrees when a thunderstorm rolls through. It can snow during any month of the year, and winter lows frequently drop below 0°F (-18°C), especially at night.",
+      directions:"Yellowstone covers nearly 3,500 square miles in the northwest corner of Wyoming (3% of the park is in Montana, 1% in Idaho). The park has five entrance stations, and several close to regular vehicles in winter — check road status before you arrive.",
+      fees:[{title:"Private vehicle (7 days)",cost:"35.00"},{title:"Motorcycle (7 days)",cost:"30.00"},{title:"Per person (7 days)",cost:"20.00"},{title:"Annual park pass",cost:"70.00"}],
+      activities:["Hiking","Wildlife Watching","Camping","Fishing","Boating","Scenic Driving","Cross-Country Skiing","Snowmobiling","Horseback Riding","Backcountry Camping"],
+      images:[
+        {url:"https://www.nps.gov/common/uploads/structured_data/28B56C01-ABED-ED7B-FDC8E6D3FC843D09.jpg", alt:"A geyser erupts steam in front of the bright sun.", credit:"NPS / Jacob W. Frank", caption:"Beehive Geyser erupting in the Upper Geyser Basin"},
+        {url:"https://www.nps.gov/common/uploads/structured_data/29EB105C-BCE3-4859-9B83F22E1091AA2F.jpg", alt:"Bison graze in sage brush", credit:"NPS / Brett Raeburn", caption:"Bison grazing in Lamar Valley in the fall"},
+        {url:"https://www.nps.gov/common/uploads/structured_data/3C7D5920-1DD8-B71B-0B83F012ED802CEA.jpg", alt:"Brilliant blues and greens of a hot spring", credit:"NPS/Jim Peaco", caption:"Grand Prismatic Spring's colors come from heat-loving microorganisms"}
+      ]
+    },
+    {
+      code:"grte", name:"Grand Teton National Park", designation:"National Park", states:"WY",
+      url:"https://www.nps.gov/grte/index.htm",
+      description:"Soaring over a landscape rich with wildlife, pristine lakes, and majestic alpine vistas, the Teton Range stands as a testament to over 11,000 years of human connection to the valley known as Jackson Hole.",
+      phone:"307-739-3399", email:"grte_info@nps.gov",
+      weather:"Grand Teton has long, cold winters — snow and frost are possible any month. Summers bring warm days, cool nights, and common afternoon thundershowers.",
+      directions:"Located in northwestern Wyoming, north of Jackson and south of Yellowstone. It's the only national park with a commercial airport (Jackson Hole Airport) within its border.",
+      fees:[{title:"Private vehicle (7 days)",cost:"35.00"},{title:"Motorcycle (7 days)",cost:"30.00"},{title:"Per person (7 days)",cost:"20.00"},{title:"Annual park pass",cost:"70.00"}],
+      activities:["Hiking","Camping","Climbing","Fishing","Boating","Wildlife Watching","Horseback Riding","Cross-Country Skiing","Snowmobiling","Paddling"],
+      images:[
+        {url:"https://www.nps.gov/common/uploads/structured_data/769E01AF-98C8-ECA3-7799030A09A7F685.jpg", alt:"Granite mountains with a cloudy blue sky and fall foliage", credit:"NPS Photo/Tobiason", caption:"The Teton Range in the fall"},
+        {url:"https://www.nps.gov/common/uploads/structured_data/76BB60E6-05CF-3ACF-A42B3397EC65B9AB.jpg", alt:"A wooden barn with snowy peaks in the background", credit:"NPS Photo/Tobiason", caption:"The Moulton Barn, one of the most photographed barns in America"},
+        {url:"https://www.nps.gov/common/uploads/structured_data/76D551CC-A4C9-119A-C17DC613DC58798C.jpg", alt:"A bull elk in a field of dried grass", credit:"NPS Photo/Adams", caption:"Fall brings the elk rut to life as bulls bugle across the valley"}
+      ]
+    },
+    {
+      code:"yose", name:"Yosemite National Park", designation:"National Park", states:"CA",
+      url:"https://www.nps.gov/yose/index.htm",
+      description:"A shrine to human foresight, the strength of granite, the power of glaciers, and the persistence of life. First protected in 1864, Yosemite spans nearly 1,200 square miles of valleys, waterfalls, and ancient sequoias.",
+      phone:"209/372-0200", email:"yose_web_manager@nps.gov",
+      weather:"Yosemite spans elevations from about 2,000 to 13,000 feet. It receives 95% of its precipitation between October and May, and most of the park is blanketed in snow from November through May.",
+      directions:"Enter year-round via Highways 41, 140, and 120 from the west. The Tioga Pass Entrance (Highway 120 east) closes roughly November through late May or June.",
+      fees:[{title:"Private vehicle (7 days)",cost:"35.00"},{title:"Motorcycle (7 days)",cost:"30.00"},{title:"Per person (7 days)",cost:"20.00"},{title:"Annual park pass",cost:"70.00"}],
+      activities:["Hiking","Camping","Climbing","Wildlife Watching","Biking","Fishing","Horseback Riding","Skiing","Swimming","Birdwatching"],
+      images:[
+        {url:"https://www.nps.gov/common/uploads/structured_data/3C84CF74-1DD8-B71B-0B9C7FF83F7C68EB.jpg", alt:"Granite dome with trace amounts of snow.", credit:"NPS / Cindy Jacoby", caption:"Half Dome, one of the most recognizable granitic formations in the world"},
+        {url:"https://www.nps.gov/common/uploads/structured_data/3C84CDD0-1DD8-B71B-0B6E5868AFC75B6B.jpg", alt:"A waterfall flowing down a granite cliff.", credit:"NPS Photo / Cindy Jacoby", caption:"Lower Yosemite Fall, an easy and popular hike"},
+        {url:"https://www.nps.gov/common/uploads/structured_data/058C8410-D5BA-32F4-BC468014AF42CB0B.jpg", alt:"El Capitan and reflection in Merced River", credit:"NPS Photo/ Christine Fey", caption:"El Capitan rises over 3,000 feet above the valley floor"}
+      ]
+    },
+    {
+      code:"zion", name:"Zion National Park", designation:"National Park", states:"UT",
+      url:"https://www.nps.gov/zion/index.htm",
+      description:"Follow paths walked for thousands of years beneath massive sandstone cliffs of cream, pink, and red. Zion's slot canyons and unique array of plants and animals reward both quiet reflection and present-day adventure.",
+      phone:"435-772-3256", email:"zion_park_information@nps.gov",
+      weather:"Zion sees a wide range of conditions — day/night temperatures can differ by over 30°F. Summer highs often exceed 100°F, and mid-July through September brings monsoons and flash-flood risk. Winters are generally mild.",
+      directions:"The South Entrance sits near Springdale, Utah; the East Entrance is west of Mt. Carmel Junction. For most of the year, Zion Canyon's scenic drive is open only to shuttle buses.",
+      fees:[{title:"Private vehicle (1–7 days)",cost:"35.00"},{title:"Motorcycle (7 days)",cost:"30.00"},{title:"Per person (7 days)",cost:"20.00"},{title:"Annual park pass",cost:"70.00"}],
+      activities:["Hiking","Canyoneering","Rock Climbing","Camping","Biking","Stargazing","Wildlife Watching","Birdwatching"],
+      images:[
+        {url:"https://www.nps.gov/common/uploads/structured_data/68BFC1AC-BF96-629F-89D261D78F181C64.jpg", alt:"A triangular sandstone mountain overlooks green foliage", credit:"NPS Photo / Shane Carte", caption:"The Watchman greets visitors at the South Entrance"},
+        {url:"https://www.nps.gov/common/uploads/structured_data/68ED8C2C-A9D3-90B2-BBC96E7A21BC3744.jpg", alt:"Tall red sandstone walls enclose a narrow river.", credit:"NPS", caption:"The Narrows, reached from the end of Riverside Walk"},
+        {url:"https://www.nps.gov/common/uploads/structured_data/69162F54-D4AF-8695-A42F97A8F9774C19.jpg", alt:"Sunset behind large red and white sandstone towers", credit:"NPS Photo / Jesse Nelson", caption:"The Towers of the Virgin at sunset"}
+      ]
+    },
+    {
+      code:"arch", name:"Arches National Park", designation:"National Park", states:"UT",
+      url:"https://www.nps.gov/arch/index.htm",
+      description:"Over 2,000 natural stone arches, soaring pinnacles, massive rock fins, and giant balanced rocks make up this red-rock wonderland in southeastern Utah.",
+      phone:"435-719-2299", email:"archinfo@nps.gov",
+      weather:"Part of the high-desert Colorado Plateau, Arches sees temperature swings of 40°F or more in a single day. Spring and fall are the most temperate seasons; summers often exceed 100°F.",
+      directions:"Five miles north of Moab, Utah on US 191. From Interstate 70, take exit 182 (Crescent Junction) and drive 28 miles south on US 191.",
+      fees:[{title:"Private vehicle (7 days)",cost:"30.00"},{title:"Motorcycle (7 days)",cost:"25.00"},{title:"Per person (7 days)",cost:"15.00"},{title:"Annual pass (Arches + Canyonlands)",cost:"55.00"}],
+      activities:["Hiking","Canyoneering","Rock Climbing","Camping","Stargazing","Biking"],
+      images:[
+        {url:"https://www.nps.gov/common/uploads/structured_data/3C7A0B2B-1DD8-B71B-0BE0E26B0740AA6B.jpg", alt:"A stone arch", credit:"NPS Photo", caption:"Delicate Arch, perhaps the most famous natural arch in the world"},
+        {url:"https://www.nps.gov/common/uploads/structured_data/3C79931C-1DD8-B71B-0BF201E3DB540D04.jpg", alt:"A broad red arch with rock pinnacles behind it", credit:"NPS Photo", caption:"Double O Arch in the Devils Garden area"},
+        {url:"https://www.nps.gov/common/uploads/structured_data/3C7A0DE5-1DD8-B71B-0BFBE720788EF4A3.jpg", alt:"Two hikers descend a broad wash between tall rock walls", credit:"NPS/Herbert", caption:"The Park Avenue Trail, ranging from easy to strenuous"}
+      ]
+    },
+    {
+      code:"dena", name:"Denali National Park & Preserve", designation:"National Park & Preserve", states:"AK",
+      url:"https://www.nps.gov/dena/index.htm",
+      description:"Six million acres of wild land bisected by one ribbon of road, culminating in North America's tallest peak. Wild animals roam unfenced land as they have for ages.",
+      phone:"907-683-9532", email:"denali_info@nps.gov",
+      weather:"Summers are typically cool and wet, highs in the upper 50s–60s°F. Snow can fall any month. Winter often reaches -40°F by January; spring is short, arriving in April/May.",
+      directions:"Reachable by road from Anchorage (about 5 hours south) or Fairbanks (about 2 hours north) via the George Parks Highway, or by the Alaska Railroad from either city.",
+      fees:[{title:"Per person (7 days)",cost:"15.00"},{title:"Annual park pass",cost:"45.00"}],
+      activities:["Hiking","Backcountry Camping","Wildlife Watching","Mountain Climbing","Dog Sledding","Bus/Shuttle Guided Tour","Stargazing","Flying"],
+      images:[
+        {url:"https://www.nps.gov/common/uploads/structured_data/3C83CC90-1DD8-B71B-0B1F35E5ED96E36F.jpg", alt:"A white sheep on a mountainside overlooking a green valley", credit:"NPS Photo / Nathan Kostegian", caption:"Dall sheep — the reason Denali was first protected"},
+        {url:"https://www.nps.gov/common/uploads/structured_data/FC8ECC8C-A531-46F8-0D60DF1C84105DBE.jpg", alt:"Three brown bears walking along a dirt road", credit:"NPS Photo / Emily Mesner", caption:"Grizzlies walking the park's sole road"},
+        {url:"https://www.nps.gov/common/uploads/structured_data/FC7B6DBE-B7A8-DC59-246E01A289DBF21E.jpg", alt:"Light turns a snowy mountain shades of pink and purple", credit:"NPS Photo / Emily Mesner", caption:"Alpenglow on North America's tallest peak"}
+      ]
+    },
+    {
+      code:"acad", name:"Acadia National Park", designation:"National Park", states:"ME",
+      url:"https://www.nps.gov/acad/index.htm",
+      description:"Protects the highest rocky headlands along the Atlantic coast, an abundance of habitats, and a rich cultural heritage — one of the ten most-visited national parks, with 27 miles of motor roads and 45 miles of carriage roads.",
+      phone:"207-288-3338", email:"acadia_information@nps.gov",
+      weather:"Acadia sees all four seasons: summers 45–90°F, falls 30–70°F, winters 14–35°F with roughly 73 inches of average snowfall, springs 30–70°F.",
+      directions:"From Boston, take I-95 north to Augusta, Maine, then Route 3 east to Ellsworth and on to Mount Desert Island.",
+      fees:[{title:"Private vehicle (7 days)",cost:"35.00"},{title:"Motorcycle (7 days)",cost:"30.00"},{title:"Per person (7 days)",cost:"20.00"},{title:"Annual park pass",cost:"70.00"}],
+      activities:["Hiking","Biking","Kayaking","Rock Climbing","Swimming","Wildlife Watching","Stargazing","Birdwatching"],
+      images:[
+        {url:"https://www.nps.gov/common/uploads/structured_data/D583EB46-F042-9F2A-FF92F9226DDB037D.jpg", alt:"A wide ocean cove with a sand beach amid wooded ridges", credit:"Photo courtesy Emma Forthofer, Friends of Acadia", caption:"Sand Beach, the largest sandy beach in the park"},
+        {url:"https://www.nps.gov/common/uploads/structured_data/D44C463F-A561-74ED-C78695D3E0D31FF3.jpg", alt:"Cyclists ride under the arch of a large stone bridge", credit:"Photo courtesy Yehyun Kim, Friends of Acadia", caption:"45 miles of historic carriage roads wind through the park"},
+        {url:"https://www.nps.gov/common/uploads/structured_data/D4EA2DD2-C4B9-9CB4-75DB3AB73C80F432.jpg", alt:"Two people seated on granite watch the sunrise over mountains", credit:"NPS Photo by Kent Miller", caption:"Sunrise from Cadillac Mountain"}
+      ]
+    },
+    {
+      code:"ever", name:"Everglades National Park", designation:"National Park", states:"FL",
+      url:"https://www.nps.gov/ever/index.htm",
+      description:"Established in 1947 as the first national park created for its biodiversity, protecting 1.5 million acres of wetland, forest, and marine habitat — and a major source of drinking water for South Florida.",
+      phone:"305-242-7700", email:"ever_information@nps.gov",
+      weather:"South Florida's climate is mild and sunny, averaging 74–77°F year-round. There's a wet season (mid-May–November) and a dry season (December–mid-May).",
+      directions:"The Ernest Coe Visitor Center is at 40001 State Road 9336, Homestead, FL. From Miami, take the Florida Turnpike south to Florida City, then follow signs on Palm Drive.",
+      fees:[{title:"Private vehicle (7 days)",cost:"35.00"},{title:"Motorcycle (7 days)",cost:"30.00"},{title:"Per person (7 days)",cost:"20.00"},{title:"Annual park pass",cost:"70.00"}],
+      activities:["Boating","Canoeing","Kayaking","Hiking","Camping","Fishing","Wildlife Watching","Birdwatching","Biking"],
+      images:[
+        {url:"https://www.nps.gov/common/uploads/structured_data/3C8547ED-1DD8-B71B-0B596F29F0A9A60B.jpg", alt:"An American alligator on the Anhinga Trail", credit:"NPS Photo", caption:"An American alligator on the Anhinga Trail"},
+        {url:"https://www.nps.gov/common/uploads/structured_data/3C854681-1DD8-B71B-0BA4F6D9379336DF.jpg", alt:"Two canoes at Nine Mile Pond during sunset", credit:"NPS Photo", caption:"Nine Mile Pond, where marsh meets mangrove"},
+        {url:"https://www.nps.gov/common/uploads/structured_data/3C85E60F-1DD8-B71B-0BAB4F7583E96025.jpg", alt:"Two visitors bike along the road in Shark Valley", credit:"NPS Photo", caption:"Biking through Shark Valley"}
+      ]
+    },
+    {
+      code:"romo", name:"Rocky Mountain National Park", designation:"National Park", states:"CO",
+      url:"https://www.nps.gov/romo/index.htm",
+      description:"415 square miles of spectacular mountain environments, from montane meadows to glistening alpine lakes and towering peaks, laced with over 300 miles of hiking trails.",
+      phone:"970-586-1206", email:"romo_information@nps.gov",
+      weather:"Elevation ranges from 7,800 to over 14,000 feet, so weather changes quickly throughout the day regardless of season.",
+      directions:"For the east side (Estes Park), follow I-25 to US Hwy 34 or 36 west. For the west side, follow I-70 to US Hwy 40 toward Granby, then US Hwy 34 east to Grand Lake.",
+      fees:[{title:"Private vehicle (1 day)",cost:"30.00"},{title:"Private vehicle (7 days)",cost:"35.00"},{title:"Per person (7 days)",cost:"20.00"},{title:"Annual park pass",cost:"70.00"}],
+      activities:["Hiking","Camping","Climbing","Fishing","Wildlife Watching","Cross-Country Skiing","Snowshoeing","Stargazing"],
+      images:[
+        {url:"https://www.nps.gov/common/uploads/structured_data/884D97C7-DE25-EC69-F4D8B6378AA8E14C.jpg", alt:"Snow dusts the surface of two mountain peaks", credit:"NPS/D.Turk", caption:"Longs Peak and Mount Meeker"},
+        {url:"https://www.nps.gov/common/uploads/structured_data/885BF182-DCD4-FE0C-2565F7F29906B864.jpg", alt:"A bull elk stands next to two cow elk in a meadow", credit:"NPS/P.Baker", caption:"Elk in the fall rut"},
+        {url:"https://www.nps.gov/common/uploads/structured_data/8824D3C2-F84D-A622-C2DE87AC4B9A8BC9.jpg", alt:"Cub Lake with reflections and yellow grasses", credit:"NPS/J.Marino", caption:"Cub Lake in autumn"}
+      ]
+    },
+    {
+      code:"grca", name:"Grand Canyon National Park", designation:"National Park", states:"AZ",
+      url:"https://www.nps.gov/grca/index.htm",
+      description:"278 miles of the Colorado River and adjacent uplands, on the ancestral homelands of eleven present-day Tribal Communities — one of the most spectacular examples of erosion anywhere in the world.",
+      phone:"928-638-7888", email:"grca_information@nps.gov",
+      weather:"Elevations range from 2,500 feet at the bottom to 8,400 feet on the North Rim. Temperatures inside the canyon run 20–30°F warmer than the rims. Winters are cold and snowy; summers bring excessive heat.",
+      directions:"The South Rim is open year-round, 60 miles north of Williams, AZ via Route 64. The North Rim's entrance opens seasonally, roughly October 1 through mid-November.",
+      fees:[{title:"Private vehicle (7 days)",cost:"35.00"},{title:"Motorcycle (7 days)",cost:"30.00"},{title:"Per person (7 days)",cost:"20.00"},{title:"Annual park pass",cost:"70.00"}],
+      activities:["Hiking","Whitewater Rafting","Backcountry Camping","Wildlife Watching","Stargazing","Biking","Horse Trekking"],
+      images:[
+        {url:"https://www.nps.gov/common/uploads/structured_data/6C7F2214-CE4D-E366-A283BE0F4E65F83B.jpg", alt:"Swirling clouds above a vast colorful canyon at sunset", credit:"NPS/M. Quinn", caption:"Sunset from Mather Point"},
+        {url:"https://www.nps.gov/common/uploads/structured_data/D098D5FD-0DF4-C3F4-083C06DBAAB173CD.jpg", alt:"A cylindrical stone tower on the edge of a mile-deep canyon", credit:"NPS/M. Quinn", caption:"Desert View Watchtower, built in 1932"},
+        {url:"https://www.nps.gov/common/uploads/structured_data/6D4E8EE9-CBB3-C067-D68889233F7AAF8F.jpg", alt:"A full moon rising above a pointed peak at sunset", credit:"NPS/M. Quinn", caption:"Moonrise over Vishnu Temple"}
+      ]
+    },
+    {
+      code:"olym", name:"Olympic National Park", designation:"National Park", states:"WA",
+      url:"https://www.nps.gov/olym/index.htm",
+      description:"Nearly a million acres of glacier-capped mountains, old-growth temperate rainforest, and over 70 miles of wild coastline — diversity is the hallmark of Olympic.",
+      phone:"360-565-3130", email:"olym_visitor_center@nps.gov",
+      weather:"Summers are fair and warm, 65–75°F, driest July through September. Winters are mild at low elevation but can bring heavy mountain snowfall; different weather often exists in different parts of the park at once.",
+      directions:"Reach the Olympic Peninsula via the I-5 corridor, then connect to Highway 101, which circles most park destinations.",
+      fees:[{title:"Private vehicle (7 days)",cost:"30.00"},{title:"Motorcycle (7 days)",cost:"25.00"},{title:"Per person (7 days)",cost:"15.00"},{title:"Annual park pass",cost:"55.00"}],
+      activities:["Hiking","Backcountry Camping","Wildlife Watching","Fishing","Kayaking","Surfing","Climbing","Birdwatching"],
+      images:[
+        {url:"https://www.nps.gov/common/uploads/structured_data/3C7B1DB4-1DD8-B71B-0B9DFEFDD398DB71.jpg", alt:"A herd of elk crossing a river", credit:"NPS Photo/Jon Preston", caption:"Roosevelt elk crossing a river"},
+        {url:"https://www.nps.gov/common/uploads/structured_data/3C7B1F36-1DD8-B71B-0B367264CE3B4EE8.jpg", alt:"Fresh snow atop the Olympic Mountains", credit:"NPS Photo/Dave Turner", caption:"Fresh snow at Hurricane Ridge"},
+        {url:"https://www.nps.gov/common/uploads/structured_data/3C7B20CD-1DD8-B71B-0B9ACC145EFE6B99.jpg", alt:"Orange sea stars on a rocky coast", credit:"NPS Photo/Bill Baccus", caption:"Tide pools along Olympic's coast"}
+      ]
+    },
+    {
+      code:"badl", name:"Badlands National Park", designation:"National Park", states:"SD",
+      url:"https://www.nps.gov/badl/index.htm",
+      description:"Striking geologic deposits containing one of the world's richest fossil beds, where ancient horses and rhinos once roamed. Today, 244,000 acres of mixed-grass prairie shelter bison, bighorn sheep, and black-footed ferrets.",
+      phone:"605-433-5361", email:"badl_information@nps.gov",
+      weather:"Temperature extremes range from 116°F to -40°F. Summers are hot and dry with occasional violent thunderstorms and hail; winters bring 12–24 inches of total snowfall.",
+      directions:"75 miles east of Rapid City, South Dakota, with entrances off I-90 at Exit 131 (Northeast) and Exit 110 (Pinnacles).",
+      fees:[{title:"Private vehicle (7 days)",cost:"30.00"},{title:"Motorcycle (7 days)",cost:"25.00"},{title:"Per person (7 days)",cost:"15.00"},{title:"Annual park pass",cost:"55.00"}],
+      activities:["Hiking","Scenic Driving","Camping","Wildlife Watching","Stargazing","Horseback Riding"],
+      images:[
+        {url:"https://www.nps.gov/common/uploads/structured_data/3C82EE63-1DD8-B71B-0BD6EE0FDCB5D402.jpg", alt:"Layered badlands formations under billowing storm clouds", credit:"NPS Photo", caption:"Summer storms roll in fast and unpredictably"},
+        {url:"https://www.nps.gov/common/uploads/structured_data/3C82ED5D-1DD8-B71B-0B2F33D3B39D6D1B.jpg", alt:"Yellow-hued rock formations among the badlands", credit:"NPS Photo", caption:"The Yellow Mounds formation"},
+        {url:"https://www.nps.gov/common/uploads/structured_data/36C156B0-F6CA-1972-F3B88C971DE39767.jpg", alt:"A road leading between snow-covered badlands formations", credit:"NPS Photo/Brad Barker", caption:"Badlands in winter"}
+      ]
+    }
+  ];
+
+  var grid = document.getElementById("grid");
+  var resultsCount = document.getElementById("resultsCount");
+  var q = document.getElementById("q");
+  var stateChipsEl = document.getElementById("stateChips");
+  var overlay = document.getElementById("overlay");
+  var detailPanel = document.getElementById("detailPanel");
+
+  var allStates = [];
+  PARKS.forEach(function(p){
+    p.states.split(",").forEach(function(s){ if (allStates.indexOf(s) === -1) allStates.push(s); });
+  });
+  allStates.sort();
+
+  var activeStates = {};
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
+    });
+  }
+
+  function buildChips(){
+    stateChipsEl.innerHTML = "";
+    allStates.forEach(function(s){
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "state-chip";
+      b.textContent = s;
+      b.addEventListener("click", function(){
+        activeStates[s] = !activeStates[s];
+        b.classList.toggle("active", !!activeStates[s]);
+        render();
+      });
+      stateChipsEl.appendChild(b);
+    });
+  }
+
+  function matches(p, term, states){
+    if (states.length && !p.states.split(",").some(function(s){ return states.indexOf(s) !== -1; })) return false;
+    if (!term) return true;
+    var hay = (p.name + " " + p.description + " " + p.states + " " + p.activities.join(" ")).toLowerCase();
+    return hay.indexOf(term) !== -1;
+  }
+
+  function render(){
+    var term = q.value.trim().toLowerCase();
+    var states = Object.keys(activeStates).filter(function(s){ return activeStates[s]; });
+    var list = PARKS.filter(function(p){ return matches(p, term, states); });
+
+    resultsCount.textContent = list.length + (list.length === 1 ? " park" : " parks");
+    grid.innerHTML = "";
+
+    if (!list.length){
+      var d = document.createElement("div");
+      d.className = "empty";
+      d.textContent = "No parks match that search. Try a different keyword or state.";
+      grid.appendChild(d);
+      return;
+    }
+
+    list.forEach(function(p){
+      var img = p.images[0];
+      var card = document.createElement("button");
+      card.type = "button";
+      card.className = "card";
+      card.innerHTML =
+        (img ? '<img src="' + escapeHtml(img.url) + '" alt="' + escapeHtml(img.alt || "") + '" loading="lazy">' : "") +
+        '<div class="inner">' +
+          '<span class="code">' + escapeHtml(p.code) + ' · ' + escapeHtml(p.states) + '</span>' +
+          '<h3>' + escapeHtml(p.name) + '</h3>' +
+          '<p>' + escapeHtml(p.description) + '</p>' +
+          '<span class="view">View details →</span>' +
+        '</div>';
+      card.addEventListener("click", function(){ openDetail(p); });
+      grid.appendChild(card);
+    });
+  }
+
+  function openDetail(p){
+    overlay.hidden = false;
+    document.body.style.overflow = "hidden";
+
+    var mainImg = p.images[0];
+    var head = mainImg
+      ? '<div class="detail-head"><img id="mainImg" src="' + escapeHtml(mainImg.url) + '" alt="' + escapeHtml(mainImg.alt || "") + '"><button class="close-btn" id="closeBtn" aria-label="Close">×</button></div>'
+      : '<div class="detail-head"><button class="close-btn" id="closeBtn" aria-label="Close">×</button></div>';
+
+    var thumbs = p.images.length > 1
+      ? '<div class="thumbs">' + p.images.map(function(im, i){
+          return '<img data-i="' + i + '" class="' + (i===0 ? "active" : "") + '" src="' + escapeHtml(im.url) + '" alt="' + escapeHtml(im.alt || "") + '">';
+        }).join("") + '</div>'
+      : "";
+
+    var credit = mainImg && mainImg.credit
+      ? '<div class="credit" id="creditLine">Photo: ' + escapeHtml(mainImg.credit) + (mainImg.caption ? " — " + escapeHtml(mainImg.caption) : "") + '</div>'
+      : '';
+
+    var activities = p.activities.map(function(a){ return '<span class="chip">' + escapeHtml(a) + '</span>'; }).join("");
+
+    var feesRows = p.fees.map(function(f){
+      return '<tr><td>' + escapeHtml(f.title) + '</td><td class="cost">$' + escapeHtml(f.cost) + '</td></tr>';
+    }).join("");
+
+    var stats =
+      '<div class="stat-row">' +
+        '<div class="stat"><div class="label">Designation</div><div class="value">' + escapeHtml(p.designation) + '</div></div>' +
+        '<div class="stat"><div class="label">States</div><div class="value">' + escapeHtml(p.states) + '</div></div>' +
+        '<div class="stat"><div class="label">Phone</div><div class="value">' + escapeHtml(p.phone) + '</div></div>' +
+      '</div>';
+
+    detailPanel.innerHTML =
+      head +
+      '<div class="detail-body">' +
+        '<div class="code">' + escapeHtml(p.code) + '</div>' +
+        '<h2 id="detailName">' + escapeHtml(p.name) + '</h2>' +
+        credit +
+        thumbs +
+        stats +
+        '<p class="desc">' + escapeHtml(p.description) + '</p>' +
+        '<div><h4 class="section-label">Activities</h4><div class="chips">' + activities + '</div></div>' +
+        '<div><h4 class="section-label">Entrance fees</h4><div class="fees-wrap"><table class="fees"><thead><tr><th>Pass</th><th>Cost</th></tr></thead><tbody>' + feesRows + '</tbody></table></div></div>' +
+        '<div><h4 class="section-label">Weather</h4><p class="desc">' + escapeHtml(p.weather) + '</p></div>' +
+        '<div><h4 class="section-label">Getting there</h4><p class="desc">' + escapeHtml(p.directions) + '</p></div>' +
+        '<div><h4 class="section-label">Contact</h4><p class="desc"><a href="mailto:' + escapeHtml(p.email) + '">' + escapeHtml(p.email) + '</a></p></div>' +
+        '<p><a href="' + escapeHtml(p.url) + '" target="_blank" rel="noopener">Official NPS page ↗</a></p>' +
+      '</div>';
+
+    document.getElementById("closeBtn").addEventListener("click", closeDetail);
+    var thumbEls = detailPanel.querySelectorAll(".thumbs img");
+    thumbEls.forEach(function(t){
+      t.addEventListener("click", function(){
+        var i = parseInt(t.getAttribute("data-i"), 10);
+        var im = p.images[i];
+        var mi = document.getElementById("mainImg");
+        if (mi) mi.src = im.url;
+        var cl = document.getElementById("creditLine");
+        if (cl) cl.textContent = "Photo: " + im.credit + (im.caption ? " — " + im.caption : "");
+        thumbEls.forEach(function(e){ e.classList.remove("active"); });
+        t.classList.add("active");
+      });
+    });
+  }
+
+  function closeDetail(){
+    overlay.hidden = true;
+    document.body.style.overflow = "";
+    detailPanel.innerHTML = "";
+  }
+
+  overlay.addEventListener("click", function(e){ if (e.target === overlay) closeDetail(); });
+  document.addEventListener("keydown", function(e){ if (e.key === "Escape" && !overlay.hidden) closeDetail(); });
+
+  q.addEventListener("input", render);
+
+  buildChips();
+  render();
+})();
+</script>
